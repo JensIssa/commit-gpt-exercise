@@ -5,17 +5,22 @@ import json
 import time
 import requests
 from typing import List, Dict
+from gpt4all import GPT4All
+
 
 SYSTEM_PROMPT = """
-You are a highly intelligent and efficient assistant specialized in generating concise, descriptive, and meaningful Git commit messages. Your task is to analyze the provided Git diffs of changes made in the repository and generate a commit message that clearly reflects the nature of these changes.
-
-Guidelines for generating the commit message:
+You are a highly intelligent and efficient assistant specialized in generating concise, descriptive, and meaningful Git commit messages. Your task is to analyze the provided Git diffs of changes made in the repository and generate a commit message that clearly reflects the nature of these changesGuidelines for generating the commit message:
 1. Use clear and concise language to describe the changes.
 2. Summarize the purpose and impact of the changes (e.g., bug fixes, new features, optimizations, refactors).
 3. Follow established Git commit message best practices (e.g., use imperative mood, keep the subject line under 50 characters).
 4. Avoid unnecessary details or jargon.
 
+Return the commit message as a JSON object with the following structure:
+{
+    "commitMessage": "Your commit message here"
+}
 """
+
 MODEL_NAME = "TheBloke/Llama-2-7B-Chat-GGUF"  # TODO: Replace with the actual model name from gpt4all
 API_ENDPOINT = "http://localhost:8080/v1/completions"  # TODO: Replace with the actual API endpoint from gpt4all
 
@@ -113,7 +118,7 @@ def call_llm_api(prompt: str) -> str | None:
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
-        "max_tokens": 1000, 
+        "max_tokens": 300, 
         "temperature": 0.7 
     }
     
@@ -131,6 +136,7 @@ def call_llm_api(prompt: str) -> str | None:
             time.sleep(BASE_DELAY * (2 ** attempt))
     
     return None
+
 
 
 
