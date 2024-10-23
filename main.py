@@ -7,16 +7,23 @@ import requests
 from typing import List, Dict
 
 SYSTEM_PROMPT = """
-Instruct the LLM in what to do with the data that is provided to it.
+You are a highly intelligent and efficient assistant specialized in generating concise, descriptive, and meaningful Git commit messages. Your task is to analyze the provided Git diffs of changes made in the repository and generate a commit message that clearly reflects the nature of these changes.
+
+Guidelines for generating the commit message:
+1. Use clear and concise language to describe the changes.
+2. Summarize the purpose and impact of the changes (e.g., bug fixes, new features, optimizations, refactors).
+3. Follow established Git commit message best practices (e.g., use imperative mood, keep the subject line under 50 characters).
+4. Avoid unnecessary details or jargon.
+
 """
-MODEL_NAME = ""  # TODO: Replace with the actual model name from gpt4all
-API_ENDPOINT = ""  # TODO: Replace with the actual API endpoint from gpt4all
+MODEL_NAME = "TheBloke/Llama-2-7B-Chat-GGUF"  # TODO: Replace with the actual model name from gpt4all
+API_ENDPOINT = "http://localhost:8080/v1/completions"  # TODO: Replace with the actual API endpoint from gpt4all
 
 API_KEY = "YOUR_API_KEY"  # TODO: Replace with the actual API key from gpt4all (maybe not needed)
 MAX_RETRIES = 3  # Number of retries for the LLM API call
 BASE_DELAY = 1  # Base delay in seconds between retries
 
-
+ 
 def is_git_repository(path: str) -> bool:
     try:
         _ = git.Repo(path).git_dir
@@ -67,6 +74,7 @@ def get_git_diffs(repo_path: str) -> str:
     Returns:
         List[Dict[str, str]]: A list of dictionaries containing the file path and the changes.
     """
+    
     repo = git.Repo(repo_path)
     diffs = []
     for item in repo.index.diff(None):
@@ -87,18 +95,43 @@ def get_git_diffs(repo_path: str) -> str:
             ]
         )
         diffs.append(diff_text)
-
+        
     return "\n".join(diffs)
 
 
 def generate_commit_message(diffs: str) -> str | None:
-    # TODO: Implement the logic to generate the commit message from the LLM response
+    prompt = f"{SYSTEM_PROMPT}\n\n{diffs}"
+    response = call_llm_api(prompt)
+    
+    if response:
+        return response
+    
     return None
 
 
 def call_llm_api(prompt: str) -> str | None:
-    # TODO: Implement the logic to call the LLM API
+    payload = {
+        "model": MODEL_NAME,
+        "prompt": prompt,
+        "max_tokens": 1000, 
+        "temperature": 0.7 
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = requests.post(API_ENDPOINT, headers=headers, json=payload)
+            response.raise_for_status()
+            return response.json().get('choices', [{}])[0].get('text', '').strip()
+        except requests.exceptions.RequestException as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(BASE_DELAY * (2 ** attempt))
+    
     return None
+
 
 
 def main():
